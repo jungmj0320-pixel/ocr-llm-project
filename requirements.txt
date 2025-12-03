@@ -1,7 +1,6 @@
 streamlit
-easyocr
 pillow
-opencv-python
 numpy
+opencv-python-headless
+pytesseract
 requests
-openai
