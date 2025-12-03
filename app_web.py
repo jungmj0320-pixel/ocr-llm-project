@@ -60,6 +60,27 @@ def parse_price(text: str):
     has_dot = "." in s
     return float(s), has_dot
 
+def preprocess_for_ocr(img):
+    """
+    Tesseract가 더 잘 읽게 하기 위한 전처리:
+    - 흑백 변환
+    - 2배 확대
+    - 가우시안 블러 + OTSU 이진화
+    """
+    # RGB → GRAY
+    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    # 글씨 키우기
+    gray = cv2.resize(
+        gray, None, fx=2, fy=2, interpolation=cv2.INTER_LINEAR
+    )
+    # 살짝 블러
+    gray = cv2.GaussianBlur(gray, (3, 3), 0)
+    # 이진화
+    _, th = cv2.threshold(
+        gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+    )
+    return th
+
 
 def run_tesseract_boxes(image_np):
     """
@@ -67,9 +88,14 @@ def run_tesseract_boxes(image_np):
     EasyOCR의 reader.readtext(...)를 대체하는 역할
     """
     # Tesseract는 RGB 이미지도 잘 읽음 (PIL -> np.array가 이미 RGB)
+    
+    # 먼저 전처리
+    proc = preprocess_for_ocr(image_np)
+
     data = pytesseract.image_to_data(
-        image_np,
+        proc,
         lang="eng",
+        config="--psm 6 --oem 3 -c tessedit_char_whitelist=0123456789.,$€£¥",
         output_type=pytesseract.Output.DICT
     )
 
@@ -349,3 +375,4 @@ if st.session_state["page"] == "upload":
     page_upload()
 else:
     page_result()
+
